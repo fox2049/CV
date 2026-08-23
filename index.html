@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yuexin Sun — Research Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --hairline: rgba(255,255,255,.09);
+    --accent: #7df9ff;
+    --ink: #eef0f4;
+    --ink-dim: rgba(238,240,244,.62);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Space Grotesk', monospace;
+    background: #000; color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  ::selection { background: rgba(125,249,255,.25); }
+
+  /* ---------- shader background ---------- */
+  #bg-wrap {
+    position: fixed; inset: 0; z-index: 0;
+  }
+  #bg-canvas { display: block; width: 100%; height: 100%; }
+  /* readability veil — keeps motion visible but tames contrast under text */
+  .veil {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background:
+      radial-gradient(120% 90% at 50% 0%, transparent 30%, rgba(0,0,5,.55) 100%),
+      linear-gradient(90deg, rgba(0,0,6,.68), rgba(0,0,6,.35) 45%, rgba(0,0,6,.68));
+  }
+  main { position: relative; z-index: 2; }
+
+  /* ---------- background preset switcher ---------- */
+  #btn-bg {
+    position: fixed; top: 20px; right: 20px; z-index: 30;
+    width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+    background: rgba(10,10,16,.5);
+    box-shadow: inset 0 0 0 1px var(--hairline), inset 0 1px 1px rgba(255,255,255,.1);
+    backdrop-filter: blur(16px);
+    display: grid; place-items: center;
+    transition: all .5s var(--ease);
+  }
+  #btn-bg svg { width: 15px; height: 15px; stroke: rgba(255,255,255,.75); stroke-width: 1.2; fill: none; opacity: .9; transition: all .6s var(--ease); }
+  #btn-bg:hover { transform: scale(1.08); box-shadow: inset 0 0 0 1px rgba(125,249,255,.35), 0 0 24px rgba(125,249,255,.12); }
+  #btn-bg:hover svg { stroke: var(--accent); transform: rotate(180deg); }
+
+  #bg-panel {
+    position: fixed; top: 66px; right: 20px; z-index: 30;
+    width: 200px; padding: 16px; border-radius: 18px;
+    background: rgba(8,8,12,.72); backdrop-filter: blur(30px) saturate(1.4);
+    box-shadow: inset 0 0 0 1px var(--hairline), inset 0 1px 1px rgba(255,255,255,.07), 0 24px 60px -20px rgba(0,0,0,.9);
+    opacity: 0; transform: translateY(-10px) scale(.95); pointer-events: none;
+    transition: opacity .45s var(--ease), transform .55s var(--ease);
+  }
+  #bg-panel.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+  #bg-panel .sec-label { margin: 0 0 12px; font-size: 9px; letter-spacing: .3em; text-transform: uppercase; color: rgba(255,255,255,.4); display:flex; align-items:center; gap:10px; }
+  #bg-panel .sec-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, var(--hairline), transparent); }
+  #bg-panel .preset-grid { grid-template-columns: 1fr 1fr; gap: 7px; display:grid; }
+  #bg-panel button {
+    padding: 9px 4px; font-family: inherit; font-size: 9.5px; letter-spacing: .12em;
+    text-transform: uppercase; cursor: pointer; border-radius: 10px;
+    color: rgba(255,255,255,.6); background: rgba(255,255,255,.03); border: none;
+    box-shadow: inset 0 0 0 1px var(--hairline);
+    transition: all .4s var(--ease);
+  }
+  #bg-panel button:hover, #bg-panel button.active {
+    color: #fff; background: rgba(125,249,255,.08);
+    box-shadow: inset 0 0 0 1px rgba(125,249,255,.35);
+  }
+
+  /* ---------- layout ---------- */
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 48px); }
+
+  /* ---------- hero ---------- */
+  header { min-height: 92vh; display: flex; flex-direction: column; justify-content: center; padding: 12vh 0 8vh; }
+  .eyebrow {
+    display: inline-block; align-self: flex-start;
+    padding: 6px 14px; margin-bottom: 28px;
+    border-radius: 999px; font-size: 10px; font-weight: 500;
+    letter-spacing: .3em; text-transform: uppercase; color: var(--accent);
+    background: rgba(125,249,255,.06);
+    box-shadow: inset 0 0 0 1px rgba(125,249,255,.2);
+    animation: rise 1s var(--ease) both;
+  }
+  h1 {
+    font-weight: 300; letter-spacing: .04em; line-height: 1.02;
+    font-size: clamp(44px, 8.5vw, 96px); color: #fff;
+    text-shadow: 0 4px 40px rgba(0,0,0,.7);
+    animation: rise 1s .1s var(--ease) both;
+  }
+  h1 em { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; color: rgba(255,255,255,.75); }
+  .tagline {
+    margin-top: 26px; max-width: 520px;
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 300;
+    font-size: clamp(16px, 2.2vw, 21px); line-height: 1.55; color: var(--ink-dim);
+    text-shadow: 0 2px 18px rgba(0,0,0,.85);
+    animation: rise 1s .2s var(--ease) both;
+  }
+  .contact {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 38px;
+    animation: rise 1s .3s var(--ease) both;
+  }
+  .contact a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px; border-radius: 999px;
+    color: var(--ink); text-decoration: none; font-size: 12px; letter-spacing: .14em;
+    background: rgba(10,10,16,.5);
+    box-shadow: inset 0 0 0 1px var(--hairline), inset 0 1px 1px rgba(255,255,255,.1);
+    backdrop-filter: blur(16px);
+    transition: all .5s var(--ease);
+  }
+  .contact a:hover {
+    transform: translateY(-2px);
+    box-shadow: inset 0 0 0 1px rgba(125,249,255,.35), 0 12px 32px -10px rgba(125,249,255,.25);
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ---------- sections ---------- */
+  section { padding: 56px 0; }
+  .sec-head { display: flex; align-items: center; gap: 18px; margin-bottom: 34px; }
+  .sec-num { font-size: 11px; letter-spacing: .2em; color: var(--accent); opacity: .8; }
+  .sec-head h2 {
+    font-size: 13px; font-weight: 500; letter-spacing: .3em;
+    text-transform: uppercase; color: #fff; white-space: nowrap;
+    text-shadow: 0 2px 14px rgba(0,0,0,.9);
+  }
+  .sec-head::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(125,249,255,.35), transparent); }
+
+  /* frosted entry card */
+  .card {
+    background: rgba(6,6,11,.66);
+    backdrop-filter: blur(22px) saturate(1.3);
+    border-radius: 20px;
+    box-shadow: inset 0 0 0 1px var(--hairline), inset 0 1px 1px rgba(255,255,255,.06), 0 24px 60px -24px rgba(0,0,0,.9);
+    padding: 26px 28px; margin-bottom: 16px;
+    transition: transform .6s var(--ease), box-shadow .6s var(--ease);
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: inset 0 0 0 1px rgba(125,249,255,.18), inset 0 1px 1px rgba(255,255,255,.08), 0 32px 70px -24px rgba(0,0,0,.95);
+  }
+
+  .entry-top { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  .entry-title { font-size: 17px; font-weight: 500; color: #fff; letter-spacing: .01em; }
+  .entry-sub { font-size: 12.5px; color: var(--ink-dim); margin-top: 4px; letter-spacing: .03em; }
+  .entry-date {
+    font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent); white-space: nowrap; opacity: .9;
+  }
+  ul.points { list-style: none; margin-top: 16px; }
+  ul.points li {
+    position: relative; padding-left: 20px; margin-bottom: 9px;
+    font-size: 13.5px; line-height: 1.65; color: rgba(238,240,244,.82); font-weight: 300;
+  }
+  ul.points li::before {
+    content: ''; position: absolute; left: 2px; top: .72em;
+    width: 6px; height: 1.5px; background: var(--accent); opacity: .65;
+  }
+  ul.points b { font-weight: 500; color: var(--ink); }
+
+  /* publications */
+  .pub {
+    counter-increment: pub;
+    padding: 18px 22px 18px 58px; margin-bottom: 10px; position: relative;
+    background: rgba(6,6,11,.6); backdrop-filter: blur(18px);
+    border-radius: 16px;
+    box-shadow: inset 0 0 0 1px var(--hairline);
+    transition: transform .5s var(--ease), box-shadow .5s var(--ease);
+  }
+  .pub:hover { transform: translateX(4px); box-shadow: inset 0 0 0 1px rgba(125,249,255,.2); }
+  .pub::before {
+    content: counter(pub, decimal-leading-zero);
+    position: absolute; left: 20px; top: 19px;
+    font-size: 11px; letter-spacing: .1em; color: var(--accent); opacity: .8;
+  }
+  .pub p { font-size: 13.5px; line-height: 1.6; color: rgba(238,240,244,.85); font-weight: 300; }
+  .pub p strong { font-weight: 500; color: #fff; }
+  .pub .venue { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); opacity: .85; }
+  .pub-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-top: 6px; }
+  .proj-link {
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); text-decoration: none;
+    border-bottom: 1px solid rgba(125,249,255,.3);
+    padding-bottom: 1px; white-space: nowrap;
+    transition: all .4s var(--ease);
+  }
+  .proj-link:hover { opacity: .8; border-color: var(--accent); }
+
+  /* chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 9px; }
+  .chip {
+    padding: 9px 17px; border-radius: 999px; font-size: 11.5px; letter-spacing: .08em;
+    color: rgba(238,240,244,.85); background: rgba(255,255,255,.045);
+    box-shadow: inset 0 0 0 1px var(--hairline);
+    transition: all .4s var(--ease); cursor: default;
+  }
+  .chip:hover { color: #fff; background: rgba(125,249,255,.07); box-shadow: inset 0 0 0 1px rgba(125,249,255,.3); }
+
+  /* awards list */
+  .award-row {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 20px;
+    padding: 15px 22px; margin-bottom: 8px;
+    background: rgba(6,6,11,.6); backdrop-filter: blur(18px);
+    border-radius: 14px; box-shadow: inset 0 0 0 1px var(--hairline);
+    transition: transform .5s var(--ease);
+  }
+  .award-row:hover { transform: translateX(4px); }
+  .award-row span { font-size: 13.5px; font-weight: 300; color: rgba(238,240,244,.88); }
+  .award-row em { font-style: normal; font-size: 11px; letter-spacing: .16em; color: var(--accent); white-space: nowrap; }
+
+  footer {
+    padding: 80px 0 60px; text-align: center;
+    font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: rgba(238,240,244,.4);
+  }
+  footer a { color: var(--accent); text-decoration: none; opacity: .8; }
+  footer a:hover { opacity: 1; }
+
+  /* scroll reveal */
+  .reveal { opacity: 0; transform: translateY(36px); filter: blur(6px); transition: opacity .9s var(--ease), transform .9s var(--ease), filter .9s var(--ease); }
+  .reveal.in { opacity: 1; transform: translateY(0); filter: blur(0); }
+
+  @media (max-width: 600px) {
+    .card { padding: 22px 20px; }
+    .pub { padding-left: 52px; }
+    .veil { background: linear-gradient(rgba(0,0,6,.55), rgba(0,0,6,.75)); }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg-wrap"><canvas id="bg-canvas"></canvas></div>
+<div class="veil"></div>
+
+<button id="btn-bg" title="Background theme">
+  <svg viewBox="0 0 16 16" stroke-linecap="round"><path d="M2.5 5h11M2.5 11h11"/><circle cx="10.5" cy="5" r="1.6" fill="#0a0a10"/><circle cx="5.5" cy="11" r="1.6" fill="#0a0a10"/></svg>
+</button>
+<div id="bg-panel">
+  <div class="sec-label">Background</div>
+  <div class="preset-grid">
+    <button data-preset="original">Original</button>
+    <button data-preset="deep">Deep Dive</button>
+    <button data-preset="ice">Ice</button>
+    <button data-preset="ember">Ember</button>
+    <button data-preset="ghost">Ghost</button>
+    <button data-preset="hyper">Hyper</button>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <header>
+    <span class="eyebrow">Research Portfolio</span>
+  <h1 style="font-family:'Newsreader', serif; font-weight:500;">Yuexin Sun</h1>
+<p class="tagline">Ph.D. Candidate in Fashion Design &amp; Engineering — building agentic systems and generative AI at the intersection of digital fashion, garment pattern making.</p>
+    <nav class="contact">
+      <a href="mailto:ysun@mail.dhu.edu.cn">ysun@mail.dhu.edu.cn</a>
+      <a href="https://sunyue.xin" target="_blank" rel="noopener">sunyue.xin ↗</a>
+      <a href="#" onclick="return false">Shanghai, China</a>
+    </nav>
+  </header>
+
+  <section id="interests">
+    <div class="sec-head reveal"><span class="sec-num">01</span><h2>Research Interests</h2></div>
+    <div class="reveal">
+      <div class="chips" style="padding:0 2px">
+        <span class="chip">Generative AI for Digital Fashion</span>
+        <span class="chip">Agentic Systems</span>
+        <span class="chip">AI-driven Garment Pattern Making</span>
+        <span class="chip">3D Garment Generation</span>
+        <span class="chip">Differentiable Physics Simulation</span>
+        <span class="chip">Human-Computer Interaction</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="education">
+    <div class="sec-head reveal"><span class="sec-num">02</span><h2>Education</h2></div>
+    <div class="card reveal">
+      <div class="entry-top">
+        <div><div class="entry-title">Donghua University</div>
+        <div class="entry-sub">Ph.D. Candidate in Fashion Design and Engineering &nbsp;·&nbsp; Advisor: Prof. Zhaohui Wang</div></div>
+        <span class="entry-date">2023 — Present</span>
+      </div>
+    </div>
+    <div class="card reveal">
+      <div class="entry-top">
+        <div><div class="entry-title">Shanghai University of Engineering Science</div>
+        <div class="entry-sub">M.S. in Fashion Design and Engineering &nbsp;·&nbsp; Advisor: Prof. Yu Chen</div></div>
+        <span class="entry-date">2020 — 2023</span>
+      </div>
+    </div>
+    <div class="card reveal">
+      <div class="entry-top">
+        <div><div class="entry-title">Shanghai University of Engineering Science</div>
+        <div class="entry-sub">B.S. in Fashion Design and Engineering</div></div>
+        <span class="entry-date">2011 — 2015</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="publications">
+    <div class="sec-head reveal"><span class="sec-num">03</span><h2>Selected Publications</h2></div>
+    <div class="pub reveal">
+      <p><strong>Sun, Y.</strong>, Wang, Z., Liu, R., et al. TailorCoPilot: Enabling Agentic Pattern Making with Version-Controlled State Tracking.</p>
+      <div class="pub-meta"><span class="venue">ACM UIST '26 · CCF-A · Accepted</span><a class="proj-link" href="https://fox2049.github.io/tailorcopilot/" target="_blank" rel="noopener">Project Page ↗</a></div>
+    </div>
+    <div class="pub reveal">
+      <p><strong>Sun, Y.</strong>, Hao, Z., Wang, Z., et al. Deep learning for 3D garment generation: A review.</p>
+      <span class="venue">Textile Research Journal · SCI · 2025</span>
+    </div>
+    <div class="pub reveal">
+      <p><strong>Sun, Y.</strong>, Chen, Y., Wang, Z., et al. Fashion style transfer: enhancing efficiency and aesthetic with a novel two-stage neural network.</p>
+      <span class="venue">The Journal of The Textile Institute · SCI · 2025, 116(9): 2075–2086</span>
+    </div>
+    <div class="pub reveal">
+      <p><strong>Sun, Y.</strong>, &amp; Chen, Y. Fast textile pattern generation combining MRF-based and Gram-based methods.</p>
+      <span class="venue">Industria Textila · SCI · 2023, 74(4): 439–445</span>
+    </div>
+    <div class="pub reveal">
+      <p><strong>Sun, Y.</strong>, &amp; Chen, Y. Generative AI for Digital Fashion.</p>
+      <span class="venue">Wool Textile Journal · Chinese Core · 2022, 50(03): 69–73</span>
+    </div>
+  </section>
+
+  <section id="experience">
+    <div class="sec-head reveal"><span class="sec-num">04</span><h2>Research &amp; Industry Experience</h2></div>
+    <div class="card reveal">
+      <div class="entry-top">
+        <div><div class="entry-title">Style3D Research · Zhejiang Linctex Digital Tech</div>
+        <div class="entry-sub">Joint Ph.D. / Research Intern &nbsp;·&nbsp; Hangzhou, China</div></div>
+        <span class="entry-date">Apr 2025 — Jul 2026</span>
+      </div>
+    </div>
+    <div class="card reveal">
+      <div class="entry-top">
+        <div><div class="entry-title">China Engineering Center · Lear Corporation (China)</div>
+        <div class="entry-sub">Automotive Seat Trim Cover Engineer &nbsp;·&nbsp; Shanghai, China</div></div>
+        <span class="entry-date">Jul 2015 — Mar 2019</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="grants">
+    <div class="sec-head reveal"><span class="sec-num">05</span><h2>Funded Projects &amp; Grants</h2></div>
+    <div class="card reveal">
+      <ul class="points" style="margin-top:0">
+        <li><b>Principal Investigator</b> (¥15,000): Automatic Generation and Dynamic Optimization of 3D Garment Patterns — Special Fund for High-Level Top-Notch Innovative Talent, 2025</li>
+        <li><b>Key Participant</b> (&gt;¥150,000): Sportswear Pattern Making and Dynamic Comfort Optimization Based on Parametric Modeling and AI — CNTAC-ANTA Joint Open Grant, 2026</li>
+        <li><b>Key Participant</b> (¥320,000): Research on Sportswear Technological Innovation and Development Trends — ANTA Group Consulting Project, 2023</li>
+        <li><b>Co-Author:</b> Introduction to Digital and Intelligent Fashion Technology (Ministry-level Planned Textbook), 2025</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="patents">
+    <div class="sec-head reveal"><span class="sec-num">06</span><h2>Patents &amp; IP</h2></div>
+    <div class="card reveal">
+      <ul class="points" style="margin-top:0">
+        <li><b>Granted Invention Patents:</b> Text-driven intelligent generation of garment patterns (ZL202510669798.7) · Body measurement and personalized pattern generation across body types (ZL202510688367.5) · Seat cover based on heterogeneous 3D printing (ZL202110379086.3)</li>
+        <li><b>Published Applications:</b> 3 patents on fashion style transfer (CN202410155358.5, CN202311638840.6, CN202311553643.4)</li>
+        <li><b>Software Copyrights:</b> Fashion auxiliary design system · Lapel fold analysis system</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="skills">
+    <div class="sec-head reveal"><span class="sec-num">07</span><h2>Technical Skills</h2></div>
+    <div class="card reveal">
+      <ul class="points" style="margin-bottom:18px">
+        <li><b>Programming:</b> Python (PyTorch, Paddle), Docker, Git, LaTeX</li>
+        <li><b>CAD &amp; Pattern Tools:</b> Style3D, CLO 3D, Blender, CATIA, Gerber, AutoCAD</li>
+      </ul>
+      <div class="chips">
+        <span class="chip">Python</span><span class="chip">PyTorch</span><span class="chip">Paddle</span>
+        <span class="chip">Docker</span><span class="chip">Git</span><span class="chip">LaTeX</span>
+        <span class="chip">Style3D</span><span class="chip">CLO 3D</span><span class="chip">Blender</span>
+        <span class="chip">CATIA</span><span class="chip">Gerber</span><span class="chip">AutoCAD</span>
+        <span class="chip">BOKE</span><span class="chip">FUYI</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="reveal">
+    Yuexin Sun · <a href="mailto:ysun@mail.dhu.edu.cn">Email</a> · <a href="https://sunyue.xin" target="_blank" rel="noopener">Website</a><br><br>
+    Background rendered live with WebGL
+  </footer>
+
+</main>
+
+<script>
+const vs = `attribute vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
+const fs = `
+precision highp float;
+uniform vec2 iResolution;
+uniform float iTime;
+uniform float uLayers, uIter, uSpeed, uFade, uGamma;
+uniform vec3 uTint;
+
+vec4 tex(vec3 p)
+{
+    float t = iTime + 78.0;
+    vec4 o = vec4(p.xyz, 3.0*sin(t*.1));
+    vec4 dec = vec4(1.,.9,.1,.15) + vec4(.06*cos(t*.1), 0., 0., .14*cos(t*.23));
+    for (int i = 0; i < 48; i++) {
+        if (float(i) >= uIter) break;
+        o.xzyw = abs(o/dot(o,o) - dec);
+    }
+    return o;
+}
+
+void main()
+{
+    vec2 uv = (gl_FragCoord.xy - iResolution.xy*.5)/iResolution.y;
+    vec3 col = vec3(0.);
+    float t = iTime * uSpeed;
+    for (int i = 0; i < 128; i++) {
+        if (float(i) >= uLayers) break;
+        float fi = float(i)/uLayers;
+        float d = fract(fi + t);
+        float s = mix(5., .5, d);
+        float f = d * smoothstep(1., uFade, d);
+        col += tex(vec3(uv*s, fi*4.)).xyz * f;
+    }
+    col /= uLayers;
+    col *= uTint;
+    col = pow(col, vec3(uGamma));
+    // gentle vignette baked into shader so edges stay calm behind text
+    float v = 1. - dot(uv*vec2(.55,.85), uv*vec2(.55,.85));
+    gl_FragColor = vec4(col * clamp(v, 0., 1.), 1.0);
+}`;
+
+const canvas = document.getElementById('bg-canvas');
+// cap DPR for perf since this renders continuously behind scrolling content
+const DPR = Math.min(devicePixelRatio || 1, 1.5);
+const gl = canvas.getContext('webgl', { antialias: false, powerPreference: 'high-performance' });
+
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, vs));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fs));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+const locP = gl.getAttribLocation(prog, 'p');
+gl.enableVertexAttribArray(locP);
+gl.vertexAttribPointer(locP, 2, gl.FLOAT, false, 0, 0);
+const uRes = gl.getUniformLocation(prog, 'iResolution');
+const uTime = gl.getUniformLocation(prog, 'iTime');
+const uU = {};
+['uLayers','uIter','uSpeed','uFade','uGamma','uTint'].forEach(n => uU[n] = gl.getUniformLocation(prog, n));
+
+const presets = {
+  original: { layers:16, iter:23, speed:.30, fade:.90, tr:2, tg:1, tb:2, gamma:.50 },
+  deep:     { layers:48, iter:28, speed:.18, fade:.95, tr:.8, tg:1.2, tb:2.6, gamma:.45 },
+  ice:      { layers:24, iter:23, speed:.22, fade:.92, tr:1.0, tg:1.8, tb:3.0, gamma:.55 },
+  ember:    { layers:32, iter:26, speed:.35, fade:.88, tr:3.2, tg:1.1, tb:.4, gamma:.50 },
+  ghost:    { layers:16, iter:23, speed:.12, fade:.90, tr:1.4, tg:1.4, tb:1.5, gamma:.65 },
+  hyper:    { layers:80, iter:32, speed:.60, fade:.94, tr:2, tg:1, tb:2, gamma:.42 },
+};
+let bg = { ...presets.original };
+function applyBg() {
+  gl.uniform1f(uU.uLayers, Math.floor(bg.layers));
+  gl.uniform1f(uU.uIter, Math.floor(bg.iter));
+  gl.uniform1f(uU.uSpeed, bg.speed);
+  gl.uniform1f(uU.uFade, bg.fade);
+  gl.uniform1f(uU.uGamma, bg.gamma);
+  gl.uniform3f(uU.uTint, bg.tr, bg.tg, bg.tb);
+  document.querySelectorAll('.preset-grid button').forEach(b =>
+    b.classList.toggle('active', b.dataset.preset === currentPreset));
+}
+let currentPreset = 'original';
+
+function resize() {
+  canvas.width = innerWidth * DPR;
+  canvas.height = innerHeight * DPR;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+addEventListener('resize', resize);
+resize();
+
+// pause rendering when tab hidden to save GPU
+let running = true;
+document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) frame(); });
+
+const start = performance.now();
+function frame() {
+  if (!running) return;
+  gl.uniform2f(uRes, canvas.width, canvas.height);
+  gl.uniform1f(uTime, (performance.now() - start) / 1000);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  requestAnimationFrame(frame);
+}
+frame();
+applyBg();
+
+// background preset switcher
+const bgBtn = document.getElementById('btn-bg');
+const bgPanel = document.getElementById('bg-panel');
+bgBtn.addEventListener('click', e => { e.stopPropagation(); bgPanel.classList.toggle('open'); });
+document.addEventListener('click', e => {
+  if (!bgPanel.contains(e.target)) bgPanel.classList.remove('open');
+});
+document.querySelectorAll('.preset-grid button').forEach(b => {
+  b.addEventListener('click', () => {
+    currentPreset = b.dataset.preset;
+    Object.assign(bg, presets[currentPreset]);
+    applyBg();
+  });
+});
+
+// scroll reveals
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
+
