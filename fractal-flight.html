@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fractal Flight — Shadertoy Replica</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #btn-settings {
+    position: fixed; top: 16px; right: 16px; z-index: 10;
+    padding: 8px 16px;
+    background: rgba(20,20,25,.7);
+    color: #eee; border: 1px solid rgba(255,255,255,.2);
+    border-radius: 6px; font: 13px/1 sans-serif; cursor: pointer;
+    backdrop-filter: blur(8px); transition: background .15s;
+  }
+  #btn-settings:hover { background: rgba(60,60,70,.85); }
+
+  #panel {
+    position: fixed; top: 56px; right: 16px; z-index: 10;
+    width: 260px; max-height: calc(100vh - 80px); overflow-y: auto;
+    background: rgba(15,15,20,.88); color: #ddd;
+    border: 1px solid rgba(255,255,255,.15); border-radius: 10px;
+    padding: 16px; font: 12px/1.5 sans-serif;
+    backdrop-filter: blur(10px); display: none;
+  }
+  #panel.open { display: block; }
+  #panel h3 { font-size: 13px; margin-bottom: 12px; color: #fff; letter-spacing: .05em; }
+  .row { margin-bottom: 10px; }
+  .row label { display: flex; justify-content: space-between; margin-bottom: 3px; color: #bbb; }
+  .row label span { color: #8cf; }
+  .row input[type=range] { width: 100%; }
+  .row input[type=color] { width: 100%; height: 26px; border: none; background: none; cursor: pointer; }
+  #panel hr { border: none; border-top: 1px solid rgba(255,255,255,.12); margin: 14px 0; }
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .preset-grid button, #btn-reset {
+    padding: 6px 4px; font-size: 11px; cursor: pointer;
+    background: rgba(255,255,255,.08); color: #ccc;
+    border: 1px solid rgba(255,255,255,.15); border-radius: 5px;
+  }
+  .preset-grid button:hover, #btn-reset:hover { background: rgba(120,160,255,.25); color: #fff; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<button id="btn-settings">Settings</button>
+<div id="panel">
+  <h3>SETTINGS</h3>
+  <div class="row"><label>Layers <span id="v-layers"></span></label><input type="range" id="p-layers" min="2" max="96" step="1" value="16"></div>
+  <div class="row"><label>Iterations <span id="v-iter"></span></label><input type="range" id="p-iter" min="4" max="40" step="1" value="23"></div>
+  <div class="row"><label>Speed <span id="v-speed"></span></label><input type="range" id="p-speed" min="0" max="1.5" step="0.01" value="0.30"></div>
+  <div class="row"><label>Zoom <span id="v-zoom"></span></label><input type="range" id="p-zoom" min="0.5" max="3" step="0.01" value="1.00"></div>
+  <div class="row"><label>Fade Start <span id="v-fade"></span></label><input type="range" id="p-fade" min="0.5" max="1.0" step="0.005" value="0.90"></div>
+  <div class="row"><label>Tint R <span id="v-tr"></span></label><input type="range" id="p-tr" min="0" max="4" step="0.05" value="2.00"></div>
+  <div class="row"><label>Tint G <span id="v-tg"></span></label><input type="range" id="p-tg" min="0" max="4" step="0.05" value="1.00"></div>
+  <div class="row"><label>Tint B <span id="v-tb"></span></label><input type="range" id="p-tb" min="0" max="4" step="0.05" value="2.00"></div>
+  <div class="row"><label>Gamma <span id="v-gamma"></span></label><input type="range" id="p-gamma" min="0.3" max="1.2" step="0.01" value="0.50"></div>
+  <hr>
+  <h3>PRESETS</h3>
+  <div class="preset-grid">
+    <button data-preset="original">Original</button>
+    <button data-preset="deep">Deep Dive</button>
+    <button data-preset="ice">Ice</button>
+    <button data-preset="ember">Ember</button>
+    <button data-preset="ghost">Ghost</button>
+    <button data-preset="hyper">Hyper</button>
+  </div>
+  <hr>
+  <button id="btn-reset" style="width:100%">Reset to Original</button>
+</div>
+
+<script>
+const vs = `attribute vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
+const fs = `
+precision highp float;
+uniform vec2 iResolution;
+uniform float iTime;
+uniform float uLayers, uIter, uSpeed, uZoom, uFade;
+uniform vec3 uTint;
+uniform float uGamma;
+
+vec4 tex(vec3 p)
+{
+    float t = iTime + 78.0;
+    vec4 o = vec4(p.xyz, 3.0*sin(t*.1));
+    vec4 dec = vec4(1.,.9,.1,.15) + vec4(.06*cos(t*.1), 0., 0., .14*cos(t*.23));
+    for (int i = 0; i < 64; i++) {
+        if (float(i) >= uIter) break;
+        o.xzyw = abs(o/dot(o,o) - dec);
+    }
+    return o;
+}
+
+void main()
+{
+    vec2 uv = (gl_FragCoord.xy - iResolution.xy*.5)/iResolution.y * uZoom;
+    vec3 col = vec3(0.);
+    float t = iTime * uSpeed;
+
+    for (int i = 0; i < 128; i++) {
+        if (float(i) > uLayers) break;
+        float fi = float(i)/uLayers;
+        float d = fract(fi + t);
+        float s = mix(5., .5, d);
+        float f = d * smoothstep(1., uFade, d);
+        col += tex(vec3(uv*s, fi*4.)).xyz * f;
+    }
+
+    col /= uLayers;
+    col *= uTint;
+    col = pow(col, vec3(uGamma));
+    gl_FragColor = vec4(col, 1.0);
+}`;
+
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, vs));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fs));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+const locP = gl.getAttribLocation(prog, 'p');
+gl.enableVertexAttribArray(locP);
+gl.vertexAttribPointer(locP, 2, gl.FLOAT, false, 0, 0);
+
+const U = {};
+['iResolution','iTime','uLayers','uIter','uSpeed','uZoom','uFade','uTint','uGamma'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
+
+const params = { layers: 16, iter: 23, speed: 0.30, zoom: 1.00, fade: 0.90, tr: 2.00, tg: 1.00, tb: 2.00, gamma: 0.50 };
+
+const presets = {
+  original: { layers:16, iter:23, speed:.30, zoom:1.0, fade:.90, tr:2, tg:1, tb:2, gamma:.50 },
+  deep:     { layers:48, iter:28, speed:.18, zoom:.7, fade:.95, tr:.8, tg:1.2, tb:2.6, gamma:.45 },
+  ice:      { layers:24, iter:23, speed:.22, zoom:1.0, fade:.92, tr:1.0, tg:1.8, tb:3.0, gamma:.55 },
+  ember:    { layers:32, iter:26, speed:.35, zoom:1.1, fade:.88, tr:3.2, tg:1.1, tb:.4, gamma:.50 },
+  ghost:    { layers:16, iter:23, speed:.12, zoom:1.0, fade:.90, tr:1.4, tg:1.4, tb:1.5, gamma:.65 },
+  hyper:    { layers:80, iter:32, speed:.60, zoom:.9, fade:.94, tr:2, tg:1, tb:2, gamma:.42 },
+};
+
+function applyParams() {
+  document.getElementById('v-layers').textContent = params.layers;
+  document.getElementById('v-iter').textContent = params.iter;
+  document.getElementById('v-speed').textContent = params.speed.toFixed(2);
+  document.getElementById('v-zoom').textContent = params.zoom.toFixed(2);
+  document.getElementById('v-fade').textContent = params.fade.toFixed(3);
+  document.getElementById('v-tr').textContent = params.tr.toFixed(2);
+  document.getElementById('v-tg').textContent = params.tg.toFixed(2);
+  document.getElementById('v-tb').textContent = params.tb.toFixed(2);
+  document.getElementById('v-gamma').textContent = params.gamma.toFixed(2);
+}
+applyParams();
+
+const bindings = [
+  ['p-layers','layers',parseInt], ['p-iter','iter',parseInt], ['p-speed','speed',parseFloat],
+  ['p-zoom','zoom',parseFloat], ['p-fade','fade',parseFloat], ['p-tr','tr',parseFloat],
+  ['p-tg','tg',parseFloat], ['p-tb','tb',parseFloat], ['p-gamma','gamma',parseFloat],
+];
+bindings.forEach(([id,key,cast]) => {
+  const el = document.getElementById(id);
+  el.value = params[key];
+  el.addEventListener('input', () => { params[key] = cast(el.value); applyParams(); });
+});
+
+document.querySelectorAll('.preset-grid button').forEach(b => {
+  b.addEventListener('click', () => {
+    Object.assign(params, presets[b.dataset.preset]);
+    bindings.forEach(([id,key]) => document.getElementById(id).value = params[key]);
+    applyParams();
+  });
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  Object.assign(params, presets.original);
+  bindings.forEach(([id,key]) => document.getElementById(id).value = params[key]);
+  applyParams();
+});
+
+const btn = document.getElementById('btn-settings');
+const panel = document.getElementById('panel');
+btn.addEventListener('click', () => panel.classList.toggle('open'));
+
+function resize() {
+  canvas.width = innerWidth * devicePixelRatio;
+  canvas.height = innerHeight * devicePixelRatio;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+addEventListener('resize', resize);
+resize();
+
+const start = performance.now();
+function frame() {
+  gl.uniform2f(U.iResolution, canvas.width, canvas.height);
+  gl.uniform1f(U.iTime, (performance.now() - start) / 1000);
+  gl.uniform1f(U.uLayers, Math.floor(params.layers));
+  gl.uniform1f(U.uIter, Math.floor(params.iter));
+  gl.uniform1f(U.uSpeed, params.speed);
+  gl.uniform1f(U.uZoom, params.zoom);
+  gl.uniform1f(U.uFade, params.fade);
+  gl.uniform3f(U.uTint, params.tr, params.tg, params.tb);
+  gl.uniform1f(U.uGamma, params.gamma);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>
