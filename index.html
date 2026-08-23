@@ -47,9 +47,46 @@
     display: grid; place-items: center;
     transition: all .5s var(--ease);
   }
-  #btn-bg svg { width: 15px; height: 15px; stroke: rgba(255,255,255,.75); stroke-width: 1.2; fill: none; opacity: .9; transition: all .6s var(--ease); }
+  #btn-bg .btn-icon { width: 15px; height: 15px; stroke: rgba(255,255,255,.75); stroke-width: 1.2; fill: none; opacity: .9; transition: all .6s var(--ease); }
   #btn-bg:hover { transform: scale(1.08); box-shadow: inset 0 0 0 1px rgba(125,249,255,.35), 0 0 24px rgba(125,249,255,.12); }
-  #btn-bg:hover svg { stroke: var(--accent); transform: rotate(180deg); }
+  #btn-bg:hover .btn-icon { stroke: var(--accent); transform: rotate(180deg); }
+
+  /* performance ring around the settings button */
+  .perf-ring {
+    position: absolute; inset: -6px; width: 50px; height: 50px;
+    transform: rotate(-90deg); pointer-events: none; overflow: visible;
+  }
+  .perf-ring circle { fill: none; stroke-width: 2; }
+  .ring-track { stroke: rgba(255,255,255,.1); }
+  .ring-bar {
+    stroke: var(--accent); stroke-linecap: round;
+    stroke-dasharray: 138.23; stroke-dashoffset: 0;
+    transition: stroke-dashoffset .8s var(--ease), stroke .5s var(--ease);
+    filter: drop-shadow(0 0 5px rgba(125,249,255,.45));
+  }
+  #btn-bg.q-warn .ring-bar { stroke: #ffd166; filter: drop-shadow(0 0 5px rgba(255,209,102,.4)); }
+  #btn-bg.q-bad .ring-bar { stroke: #ff6f6f; filter: drop-shadow(0 0 5px rgba(255,111,111,.4)); }
+
+  /* performance readouts inside settings panel */
+  .perf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }
+  .perf-cell {
+    padding: 10px 4px; text-align: center; border-radius: 10px;
+    background: rgba(255,255,255,.03);
+    box-shadow: inset 0 0 0 1px var(--hairline);
+  }
+  .perf-cell b {
+    display: block; font-size: 16px; font-weight: 500; color: var(--accent);
+    font-variant-numeric: tabular-nums; text-shadow: 0 0 14px rgba(125,249,255,.4);
+  }
+  .perf-cell span {
+    display: block; margin-top: 2px; font-size: 8px;
+    letter-spacing: .22em; text-transform: uppercase; color: rgba(255,255,255,.38);
+  }
+  #stat-quality {
+    margin-top: 9px; text-align: center; font-size: 8.5px;
+    letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.4);
+  }
+  #stat-quality em { font-style: normal; color: var(--accent); }
 
   #bg-panel {
     position: fixed; top: 66px; right: 20px; z-index: 30;
@@ -239,7 +276,11 @@
 <div class="veil"></div>
 
 <button id="btn-bg" title="Background theme">
-  <svg viewBox="0 0 16 16" stroke-linecap="round"><path d="M2.5 5h11M2.5 11h11"/><circle cx="10.5" cy="5" r="1.6" fill="#0a0a10"/><circle cx="5.5" cy="11" r="1.6" fill="#0a0a10"/></svg>
+  <svg class="perf-ring" viewBox="0 0 50 50" aria-hidden="true">
+    <circle class="ring-track" cx="25" cy="25" r="22"/>
+    <circle class="ring-bar" cx="25" cy="25" r="22"/>
+  </svg>
+  <svg class="btn-icon" viewBox="0 0 16 16" stroke-linecap="round"><path d="M2.5 5h11M2.5 11h11"/><circle cx="10.5" cy="5" r="1.6" fill="#0a0a10"/><circle cx="5.5" cy="11" r="1.6" fill="#0a0a10"/></svg>
 </button>
 <div id="bg-panel">
   <div class="sec-label">Background</div>
@@ -251,6 +292,13 @@
     <button data-preset="ghost">Ghost</button>
     <button data-preset="hyper">Hyper</button>
   </div>
+
+  <div class="sec-label" style="margin-top:16px">Performance</div>
+  <div class="perf-stats">
+    <div class="perf-cell"><b id="stat-fps">—</b><span>FPS</span></div>
+    <div class="perf-cell"><b id="stat-perf">—</b><span>Efficiency</span></div>
+  </div>
+  <div id="stat-quality">Adaptive Quality · <em>Full</em></div>
 </div>
 
 <main class="wrap">
@@ -400,7 +448,8 @@ const fs = `
 precision highp float;
 uniform vec2 iResolution;
 uniform float iTime;
-uniform float uLayers, uIter, uSpeed, uFade, uGamma;
+uniform float uLayers, uIter, uFade, uGamma;
+uniform float uFlowTime;
 uniform vec3 uTint;
 
 vec4 tex(vec3 p)
@@ -419,7 +468,7 @@ void main()
 {
     vec2 uv = (gl_FragCoord.xy - iResolution.xy*.5)/iResolution.y;
     vec3 col = vec3(0.);
-    float t = iTime * uSpeed;
+    float t = uFlowTime;
     for (int i = 0; i < 128; i++) {
         if (float(i) >= uLayers) break;
         float fi = float(i)/uLayers;
@@ -437,9 +486,28 @@ void main()
 }`;
 
 const canvas = document.getElementById('bg-canvas');
-// cap DPR for perf since this renders continuously behind scrolling content
-const DPR = Math.min(devicePixelRatio || 1, 1.5);
 const gl = canvas.getContext('webgl', { antialias: false, powerPreference: 'high-performance' });
+
+/* ---------- performance monitor + adaptive quality ---------- */
+// each tier scales down geometry (layers), deformation complexity (iter),
+// motion tempo (mSpeed) and render resolution (dpr) to win back frame time
+const TIERS = [
+  { name:'Full',     dpr:1.5,  mLayers:1.00, mIter:1.00, mSpeed:1.00 },
+  { name:'Smooth',   dpr:1.25, mLayers:0.72, mIter:0.82, mSpeed:0.88 },
+  { name:'Balanced', dpr:1.0,  mLayers:0.50, mIter:0.62, mSpeed:0.76 },
+  { name:'Eco',      dpr:0.8,  mLayers:0.34, mIter:0.45, mSpeed:0.60 },
+];
+let tier = 0;
+let emaDt = 16.7;                       // smoothed frame time (ms)
+let flowT = 0, lastTick = performance.now();
+const statFps = document.getElementById('stat-fps');
+const statPerf = document.getElementById('stat-perf');
+const statQuality = document.getElementById('stat-quality');
+const ringBar = document.querySelector('#btn-bg .ring-bar');
+const bgBtn = document.getElementById('btn-bg');
+const RING_C = 2 * Math.PI * 22;
+const fpsOf = () => Math.min(240, 1000 / Math.max(emaDt, 1));
+const perfPct = () => Math.max(0, Math.min(100, fpsOf() / 60 * 100));
 
 function compile(type, src) {
   const s = gl.createShader(type);
@@ -462,7 +530,7 @@ gl.vertexAttribPointer(locP, 2, gl.FLOAT, false, 0, 0);
 const uRes = gl.getUniformLocation(prog, 'iResolution');
 const uTime = gl.getUniformLocation(prog, 'iTime');
 const uU = {};
-['uLayers','uIter','uSpeed','uFade','uGamma','uTint'].forEach(n => uU[n] = gl.getUniformLocation(prog, n));
+['uLayers','uIter','uFade','uGamma','uTint','uFlowTime'].forEach(n => uU[n] = gl.getUniformLocation(prog, n));
 
 const presets = {
   original: { layers:16, iter:23, speed:.30, fade:.90, tr:2, tg:1, tb:2, gamma:.50 },
@@ -474,18 +542,23 @@ const presets = {
 };
 let bg = { ...presets.original };
 function applyBg() {
-  gl.uniform1f(uU.uLayers, Math.floor(bg.layers));
-  gl.uniform1f(uU.uIter, Math.floor(bg.iter));
-  gl.uniform1f(uU.uSpeed, bg.speed);
+  const t = TIERS[tier];
+  gl.uniform1f(uU.uLayers, Math.max(3, Math.floor(bg.layers * t.mLayers)));
+  gl.uniform1f(uU.uIter, Math.max(10, Math.floor(bg.iter * t.mIter)));
   gl.uniform1f(uU.uFade, bg.fade);
   gl.uniform1f(uU.uGamma, bg.gamma);
   gl.uniform3f(uU.uTint, bg.tr, bg.tg, bg.tb);
+  gl.uniform1f(uU.uFlowTime, flowT);
   document.querySelectorAll('.preset-grid button').forEach(b =>
     b.classList.toggle('active', b.dataset.preset === currentPreset));
+  statQuality.innerHTML = 'Adaptive Quality · <em>' + t.name + '</em>';
 }
 let currentPreset = 'original';
 
+// DPR capped per adaptive-quality tier (set in resize)
+let DPR;
 function resize() {
+  DPR = Math.min(devicePixelRatio || 1, TIERS[tier].dpr);
   canvas.width = innerWidth * DPR;
   canvas.height = innerHeight * DPR;
   gl.viewport(0, 0, canvas.width, canvas.height);
@@ -495,33 +568,75 @@ resize();
 
 // pause rendering when tab hidden to save GPU
 let running = true;
-document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) frame(); });
+document.addEventListener('visibilitychange', () => {
+  running = !document.hidden;
+  if (running) { lastTick = performance.now(); requestAnimationFrame(frame); }
+});
 
 const start = performance.now();
-function frame() {
+function frame(now) {
   if (!running) return;
+  const dt = Math.min(0.1, (now - lastTick) / 1000) || 0;
+  lastTick = now;
+  // animation tempo is folded into an accumulated clock so speed changes stay seamless
+  flowT += dt * bg.speed * TIERS[tier].mSpeed;
+  if (dt > 0) emaDt = emaDt * 0.88 + (dt * 1000) * 0.12;
+
   gl.uniform2f(uRes, canvas.width, canvas.height);
-  gl.uniform1f(uTime, (performance.now() - start) / 1000);
+  gl.uniform1f(uTime, (now - start) / 1000);
+  gl.uniform1f(uU.uFlowTime, flowT);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
   requestAnimationFrame(frame);
 }
-frame();
+requestAnimationFrame(frame);
 applyBg();
 
 // background preset switcher
-const bgBtn = document.getElementById('btn-bg');
 const bgPanel = document.getElementById('bg-panel');
 bgBtn.addEventListener('click', e => { e.stopPropagation(); bgPanel.classList.toggle('open'); });
 document.addEventListener('click', e => {
   if (!bgPanel.contains(e.target)) bgPanel.classList.remove('open');
 });
+let badStreak = 0, goodStreak = 0, cooldownUntil = 0;
 document.querySelectorAll('.preset-grid button').forEach(b => {
   b.addEventListener('click', () => {
     currentPreset = b.dataset.preset;
     Object.assign(bg, presets[currentPreset]);
-    applyBg();
+    // give the new preset a fair chance at full quality, then let the governor adapt
+    tier = 0; badStreak = goodStreak = 0;
+    cooldownUntil = performance.now() + 2500;
+    resize(); applyBg();
   });
 });
+
+// HUD refresh (throttled) — ring arc + panel readouts
+setInterval(() => {
+  if (!running) return;
+  const pct = perfPct();
+  statFps.textContent = Math.round(fpsOf());
+  statPerf.textContent = Math.round(pct) + '%';
+  ringBar.style.strokeDashoffset = (RING_C * (1 - pct / 100)).toFixed(2);
+  bgBtn.classList.toggle('q-warn', pct < 85 && pct >= 55);
+  bgBtn.classList.toggle('q-bad', pct < 55);
+}, 500);
+
+// adaptive quality governor — drops a tier when fps sags below ~48,
+// climbs back once the page sustains ~57+ fps
+setInterval(() => {
+  if (!running || performance.now() < cooldownUntil) return;
+  const fps = fpsOf(), now = performance.now();
+  if (fps < 48 && tier < TIERS.length - 1) {
+    if (++badStreak >= 2) {
+      tier++; badStreak = goodStreak = 0;
+      cooldownUntil = now + 3500; resize(); applyBg();
+    }
+  } else if (fps >= 57 && tier > 0) {
+    if (++goodStreak >= 4) {
+      tier--; goodStreak = 0;
+      cooldownUntil = now + 3500; resize(); applyBg();
+    }
+  } else { badStreak = goodStreak = 0; }
+}, 1200);
 
 // scroll reveals
 const io = new IntersectionObserver(entries => {
