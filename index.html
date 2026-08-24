@@ -27,7 +27,13 @@
   #bg-wrap {
     position: fixed; inset: 0; z-index: 0;
   }
-  #bg-canvas { display: block; width: 100%; height: 100%; }
+  /* canvas starts hidden and slowly materializes while the auto-quality
+     probe settles underneath — near-zero black hold, tuning never seen */
+  #bg-canvas {
+    display: block; width: 100%; height: 100%;
+    opacity: 0; transition: opacity 3.2s var(--ease);
+  }
+  #bg-canvas.show { opacity: 1; }
   /* readability veil — keeps motion visible but tames contrast under text */
   .veil {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;
@@ -495,9 +501,12 @@ void main()
         float d = fract(fi + t);
         float s = mix(5., .5, d);
         float f = d * smoothstep(1., uFade, d);
+        // fractional top layer fades in/out smoothly so adaptive quality
+        // changes never pop a whole layer at once
+        f *= clamp(uLayers - float(i), 0., 1.);
         col += tex(vec3(uv*s, fi*4.)).xyz * f;
     }
-    col /= uLayers;
+    col /= max(uLayers, 1.);
     col *= uTint;
     col = pow(col, vec3(uGamma));
     // gentle vignette baked into shader so edges stay calm behind text
@@ -510,18 +519,21 @@ const gl = canvas.getContext('webgl', { antialias: false, powerPreference: 'high
 
 /* ---------- performance monitor + adaptive quality ---------- */
 // quality is a continuous 0..1 scalar: render resolution, layer count and
-// iteration count all interpolate from it. The governor only walks it DOWN
-// in small steps while fps sags — no climb-back — so the picture settles and
-// holds steady instead of oscillating. Steps are small enough to read as a
-// gentle softening, not a quality switch.
+// iteration count all interpolate from it. Auto mode starts from a device-
+// class prior (not the floor) and nudges UP only, latching for good the
+// moment fps can't hold ~60. The slow reveal runs in parallel with the
+// probe, so there's no long black hold and the tuning is never seen.
 const Q_STOPS = [
   { name:'Full',     q:1.00 },
   { name:'Smooth',   q:0.62 },
   { name:'Balanced', q:0.38 },
   { name:'Eco',      q:0.12 },
 ];
-let quality = 1;                        // auto-governed, only decreases
-let manualQ = -1;                       // -1 = follow governor, else locked 0..1
+// device-class prior — desktop GPUs get a head start, touch devices stay modest
+const Q_PRIOR = (matchMedia('(pointer: coarse)').matches || innerWidth < 720) ? 0.25 : 0.5;
+let quality = Q_PRIOR;                  // auto-governed; probes upward only
+let manualQ = -1;                       // -1 = follow probe, else locked 0..1
+let probed = false;                     // true once the ramp has latched
 const effQ = () => manualQ >= 0 ? manualQ : quality;
 const lerp = (a, b, t) => a + (b - a) * t;
 const qScale = () => {
@@ -539,6 +551,7 @@ const qName = () => {
   return Q_STOPS[best].name;
 };
 let emaDt = 16.7;                       // smoothed frame time (ms)
+const lastDts = [];                     // raw frame times, last few frames
 let flowT = 0, lastTick = performance.now();
 const qStatus = document.getElementById('q-status');
 const tierSlider = document.getElementById('p-tier');
@@ -547,6 +560,9 @@ const bgBtn = document.getElementById('btn-bg');
 const RING_C = 2 * Math.PI * 22;
 const fpsOf = () => Math.min(240, 1000 / Math.max(emaDt, 1));
 const perfPct = () => Math.max(0, Math.min(100, fpsOf() / 60 * 100));
+// worst single frame of the last few — reacts instantly to an fps collapse,
+// unlike the EMA which trails it by many frames
+const instFps = () => lastDts.length ? 1000 / Math.max(...lastDts) : 60;
 
 function compile(type, src) {
   const s = gl.createShader(type);
@@ -582,7 +598,7 @@ const presets = {
 let bg = { ...presets.original };
 function applyBg() {
   const s = qScale();
-  gl.uniform1f(uU.uLayers, Math.max(3, Math.floor(bg.layers * s.mLayers)));
+  gl.uniform1f(uU.uLayers, Math.max(3, bg.layers * s.mLayers)); // fractional: top layer blends
   gl.uniform1f(uU.uIter, Math.max(10, Math.floor(bg.iter * s.mIter)));
   gl.uniform1f(uU.uFade, bg.fade);
   gl.uniform1f(uU.uGamma, bg.gamma);
@@ -608,7 +624,14 @@ resize();
 let running = true;
 document.addEventListener('visibilitychange', () => {
   running = !document.hidden;
-  if (running) { lastTick = performance.now(); requestAnimationFrame(frame); }
+  if (running) {
+    lastTick = performance.now();
+    lastDts.length = 0;   // drop stale frame times from the hidden period
+    // give the probe a quiet moment after returning instead of judging
+    // the first janky frames
+    warmupUntil = Math.max(warmupUntil, performance.now() + 800);
+    requestAnimationFrame(frame);
+  }
 });
 
 const start = performance.now();
@@ -616,11 +639,15 @@ function frame(now) {
   if (!running) return;
   const dt = Math.min(0.1, (now - lastTick) / 1000) || 0;
   lastTick = now;
-  // animation tempo is folded into an accumulated clock so speed changes stay seamless
-  // motion tempo stays constant — only sharpness/detail adapt, so the
-  // animation never visibly "shifts gears" while quality walks down
+  // animation tempo is folded into an accumulated clock so speed changes stay seamless.
+  // motion tempo stays constant — only sharpness/detail adapts, so the
+  // animation never visibly "shifts gears" while quality changes
   flowT += dt * bg.speed;
-  if (dt > 0) emaDt = emaDt * 0.88 + (dt * 1000) * 0.12;
+  if (dt > 0) {
+    emaDt = emaDt * 0.88 + (dt * 1000) * 0.12;
+    lastDts.push(dt * 1000);
+    if (lastDts.length > 5) lastDts.shift();
+  }
 
   gl.uniform2f(uRes, canvas.width, canvas.height);
   gl.uniform1f(uTime, (now - start) / 1000);
@@ -637,19 +664,28 @@ bgBtn.addEventListener('click', e => { e.stopPropagation(); bgPanel.classList.to
 document.addEventListener('click', e => {
   if (!bgPanel.contains(e.target)) bgPanel.classList.remove('open');
 });
-let lowStreak = 0, cooldownUntil = 0;
+let lowStreak = 0, warmupUntil = performance.now() + 450;
+let revealAt = Infinity, trimmed = false, trimStreak = 0;
 document.querySelectorAll('.preset-grid button').forEach(b => {
   b.addEventListener('click', () => {
     currentPreset = b.dataset.preset;
     Object.assign(bg, presets[currentPreset]);
-    // give a new preset a fair chance at full quality, then let the governor
-    // walk down again if needed (skipped while the user has locked quality)
-    if (manualQ < 0) { quality = 1; lowStreak = 0; cooldownUntil = performance.now() + 2500; }
+    // a fresh preset re-probes: drop to the floor, let the GPU settle, then
+    // ramp back up to whatever this machine can hold (skipped when locked)
+    if (manualQ < 0) {
+      quality = Q_PRIOR; probed = false; lowStreak = 0;
+      trimmed = false; trimStreak = 0;
+      warmupUntil = performance.now() + 2000;
+    }
     resize(); applyBg(); syncTierUI();
   });
 });
 
 // quality status line + manual quality override
+function revealBg() {
+  if (!canvas.classList.contains('show')) revealAt = performance.now();
+  canvas.classList.add('show');
+}
 function paintTierFill() {
   tierSlider.style.setProperty('--fill', (+tierSlider.value * 25) + '%');
 }
@@ -677,30 +713,62 @@ setInterval(() => {
   updateQStatus();
 }, 500);
 
-// drag to Auto to re-enable the governor, or lock any fixed quality stop
+// drag to Auto to re-run the ramp probe, or lock any fixed quality stop
 tierSlider.addEventListener('input', () => {
   const v = +tierSlider.value;
   manualQ = v === 0 ? -1 : Q_STOPS[v - 1].q;
-  if (v === 0) { lowStreak = 0; cooldownUntil = performance.now() + 1500; }
+  if (v === 0) {
+    quality = Q_PRIOR; probed = false; lowStreak = 0;
+    trimmed = false; trimStreak = 0;
+    warmupUntil = performance.now() + 1500;
+  }
+  revealBg();                              // manual action: show the result immediately
   resize(); applyBg(); paintTierFill(); updateQStatus();
 });
 syncTierUI();
 
-// adaptive quality governor (Auto mode only) — walks quality DOWN in small
-// steps while fps sags below ~46 and never climbs back, so once it settles
-// the picture holds steady. Mild sag eases down ~7% per step; a dire sag
-// (<32fps) escapes faster. Each step only slightly softens the render.
+// auto probe (Auto mode only) — tunes INVISIBLY: the canvas stays black while
+// quality ramps upward from the floor, and the moment the machine can't hold
+// ~60 it latches and the finished background fades in.
+//
+// The gate checks BOTH the smoothed fps trend AND the worst single recent
+// frame: an EMA alone lags a hard fps collapse by many frames, which let the
+// ramp keep digging deep into the red before it ever noticed. Step size also
+// shrinks as quality rises, because render cost grows superlinearly — near
+// the ceiling each step must be small or it leaps straight past the limit.
 setInterval(() => {
-  if (!running || manualQ >= 0 || performance.now() < cooldownUntil) { lowStreak = 0; return; }
-  const fps = fpsOf();
-  if (fps < 46 && quality > 0) {
-    if (++lowStreak >= (fps < 32 ? 1 : 2)) {
-      quality = Math.max(0, quality - (fps < 32 ? 0.14 : 0.07));
-      lowStreak = 0;
+  if (!running || manualQ >= 0 || probed || performance.now() < warmupUntil) return;
+  if (fpsOf() < 56 || instFps() < 45) {
+    if (++lowStreak >= 2) { probed = true; revealBg(); }   // found the ceiling
+    return;
+  }
+  lowStreak = 0;
+  if (quality < 1) {
+    quality = Math.min(1, quality + (0.14 - quality * 0.08));
+    resize(); applyBg(); syncTierUI();
+  } else {
+    probed = true; revealBg();                             // reached Full and holding
+  }
+}, 280);
+
+// one-time emergency trim — if the latch still landed in a slideshow (thermal
+// cliff mid-probe, background app spike), quietly give back some quality ONCE
+// shortly after the fade-in; nothing is ever added back afterwards
+setInterval(() => {
+  if (!running || manualQ >= 0 || !probed || trimmed || performance.now() < revealAt + 2500) return;
+  if (fpsOf() < 42 || instFps() < 26) {
+    if (++trimStreak >= 3) {
+      trimmed = true;
+      quality = Math.max(0, quality - 0.18);
       resize(); applyBg(); syncTierUI();
     }
-  } else lowStreak = 0;
-}, 900);
+  } else trimStreak = 0;
+}, 800);
+
+// the slow materialize begins almost immediately — by the time the fade
+// completes (~3.7s) the probe has latched underneath it, so users see one
+// continuous gentle reveal instead of a black hold followed by a pop-in
+setTimeout(revealBg, 500);
 
 // scroll reveals
 const io = new IntersectionObserver(entries => {
