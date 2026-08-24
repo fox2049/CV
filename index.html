@@ -68,49 +68,68 @@
   #btn-bg.q-warn .ring-bar { stroke: #ffd166; filter: drop-shadow(0 0 5px rgba(255,209,102,.4)); }
   #btn-bg.q-bad .ring-bar { stroke: #ff6f6f; filter: drop-shadow(0 0 5px rgba(255,111,111,.4)); }
 
-  /* performance readouts inside settings panel */
-  .perf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }
-  .perf-cell {
-    padding: 10px 4px; text-align: center; border-radius: 10px;
-    background: rgba(255,255,255,.03);
-    box-shadow: inset 0 0 0 1px var(--hairline);
+  /* ---------- render quality ---------- */
+  .q-row { margin-top: 14px; }
+  #p-tier {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 18px; background: transparent; cursor: pointer;
   }
-  .perf-cell b {
-    display: block; font-size: 16px; font-weight: 500; color: var(--accent);
-    font-variant-numeric: tabular-nums; text-shadow: 0 0 14px rgba(125,249,255,.4);
+  #p-tier::-webkit-slider-runnable-track {
+    height: 2px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent) var(--fill,25%), rgba(255,255,255,.12) var(--fill,25%));
   }
-  .perf-cell span {
-    display: block; margin-top: 2px; font-size: 8px;
-    letter-spacing: .22em; text-transform: uppercase; color: rgba(255,255,255,.38);
+  #p-tier::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 13px; height: 13px; margin-top: -5.5px; border-radius: 50%;
+    background: #0a0a0e;
+    box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 12px rgba(125,249,255,.5);
+    transition: transform .3s var(--ease);
   }
-  #stat-quality {
-    margin-top: 9px; text-align: center; font-size: 8.5px;
-    letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.4);
+  #p-tier:hover::-webkit-slider-thumb { transform: scale(1.2); }
+  #p-tier:active::-webkit-slider-thumb { transform: scale(1.05); }
+  #p-tier::-moz-range-track { height: 2px; border-radius: 2px; background: rgba(255,255,255,.12); }
+  #p-tier::-moz-range-progress { height: 2px; border-radius: 2px; background: var(--accent); }
+  #p-tier::-moz-range-thumb {
+    width: 13px; height: 13px; border-radius: 50%; border: none;
+    background: #0a0a0e; box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 12px rgba(125,249,255,.5);
   }
-  #stat-quality em { font-style: normal; color: var(--accent); }
+  .q-ticks { display: flex; justify-content: space-between; margin-top: 5px; }
+  .q-ticks span { font-size: 8px; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.32); }
+  #q-status {
+    margin-top: 15px; padding-top: 13px;
+    border-top: 1px solid var(--hairline);
+    text-align: center; font-size: 9px; letter-spacing: .16em;
+    text-transform: uppercase; color: rgba(255,255,255,.45);
+  }
+  #q-status em { font-style: normal; color: var(--accent); }
+  #q-status b { font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; }
 
   #bg-panel {
     position: fixed; top: 66px; right: 20px; z-index: 30;
-    width: 200px; padding: 16px; border-radius: 18px;
-    background: rgba(8,8,12,.72); backdrop-filter: blur(30px) saturate(1.4);
-    box-shadow: inset 0 0 0 1px var(--hairline), inset 0 1px 1px rgba(255,255,255,.07), 0 24px 60px -20px rgba(0,0,0,.9);
+    width: 238px; padding: 20px 18px 16px; border-radius: 20px;
+    background: rgba(6,6,11,.66); backdrop-filter: blur(22px) saturate(1.3);
+    box-shadow: inset 0 0 0 1px var(--hairline), inset 0 1px 1px rgba(255,255,255,.06), 0 24px 60px -20px rgba(0,0,0,.9);
     opacity: 0; transform: translateY(-10px) scale(.95); pointer-events: none;
     transition: opacity .45s var(--ease), transform .55s var(--ease);
   }
   #bg-panel.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
   #bg-panel .sec-label { margin: 0 0 12px; font-size: 9px; letter-spacing: .3em; text-transform: uppercase; color: rgba(255,255,255,.4); display:flex; align-items:center; gap:10px; }
   #bg-panel .sec-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, var(--hairline), transparent); }
-  #bg-panel .preset-grid { grid-template-columns: 1fr 1fr; gap: 7px; display:grid; }
+  #bg-panel .preset-grid { grid-template-columns: 1fr 1fr; gap: 8px; display:grid; }
   #bg-panel button {
-    padding: 9px 4px; font-family: inherit; font-size: 9.5px; letter-spacing: .12em;
-    text-transform: uppercase; cursor: pointer; border-radius: 10px;
-    color: rgba(255,255,255,.6); background: rgba(255,255,255,.03); border: none;
+    padding: 10px 6px; font-family: inherit; font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; cursor: pointer; border-radius: 999px;
+    color: rgba(238,240,244,.7); background: rgba(255,255,255,.04); border: none;
     box-shadow: inset 0 0 0 1px var(--hairline);
     transition: all .4s var(--ease);
   }
-  #bg-panel button:hover, #bg-panel button.active {
-    color: #fff; background: rgba(125,249,255,.08);
-    box-shadow: inset 0 0 0 1px rgba(125,249,255,.35);
+  #bg-panel button:hover {
+    color: #fff; background: rgba(125,249,255,.07);
+    box-shadow: inset 0 0 0 1px rgba(125,249,255,.3);
+  }
+  #bg-panel button.active {
+    color: #fff; background: rgba(125,249,255,.1);
+    box-shadow: inset 0 0 0 1px rgba(125,249,255,.4);
   }
 
   /* ---------- layout ---------- */
@@ -294,12 +313,12 @@
     <button data-preset="hyper">Hyper</button>
   </div>
 
-  <div class="sec-label" style="margin-top:16px">Performance</div>
-  <div class="perf-stats">
-    <div class="perf-cell"><b id="stat-fps">—</b><span>FPS</span></div>
-    <div class="perf-cell"><b id="stat-perf">—</b><span>Efficiency</span></div>
+  <div class="sec-label" style="margin-top:16px">Render Quality</div>
+  <div class="q-row">
+    <input type="range" id="p-tier" min="0" max="4" step="1" value="0">
+    <div class="q-ticks"><span>Auto</span><span>Full</span><span>Smooth</span><span>Balanced</span><span>Eco</span></div>
   </div>
-  <div id="stat-quality">Adaptive Quality · <em>Full</em></div>
+  <div id="q-status"><em>Auto</em> · <em>Full</em> · <b>—</b> fps</div>
 </div>
 
 <main class="wrap">
@@ -490,20 +509,39 @@ const canvas = document.getElementById('bg-canvas');
 const gl = canvas.getContext('webgl', { antialias: false, powerPreference: 'high-performance' });
 
 /* ---------- performance monitor + adaptive quality ---------- */
-// each tier scales down geometry (layers), deformation complexity (iter),
-// motion tempo (mSpeed) and render resolution (dpr) to win back frame time
-const TIERS = [
-  { name:'Full',     dpr:1.5,  mLayers:1.00, mIter:1.00, mSpeed:1.00 },
-  { name:'Smooth',   dpr:1.25, mLayers:0.72, mIter:0.82, mSpeed:0.88 },
-  { name:'Balanced', dpr:1.0,  mLayers:0.50, mIter:0.62, mSpeed:0.76 },
-  { name:'Eco',      dpr:0.8,  mLayers:0.34, mIter:0.45, mSpeed:0.60 },
+// quality is a continuous 0..1 scalar: render resolution, layer count and
+// iteration count all interpolate from it. The governor only walks it DOWN
+// in small steps while fps sags — no climb-back — so the picture settles and
+// holds steady instead of oscillating. Steps are small enough to read as a
+// gentle softening, not a quality switch.
+const Q_STOPS = [
+  { name:'Full',     q:1.00 },
+  { name:'Smooth',   q:0.62 },
+  { name:'Balanced', q:0.38 },
+  { name:'Eco',      q:0.12 },
 ];
-let tier = 0;
+let quality = 1;                        // auto-governed, only decreases
+let manualQ = -1;                       // -1 = follow governor, else locked 0..1
+const effQ = () => manualQ >= 0 ? manualQ : quality;
+const lerp = (a, b, t) => a + (b - a) * t;
+const qScale = () => {
+  const q = effQ();
+  return {
+    dprCap:  lerp(0.55, 1.50, q),
+    mLayers: lerp(0.30, 1.00, q),
+    mIter:   lerp(0.42, 1.00, q),
+  };
+};
+const qName = () => {
+  const q = effQ();
+  let best = 0, bd = 9;
+  Q_STOPS.forEach((s, i) => { const d = Math.abs(s.q - q); if (d < bd) { bd = d; best = i; } });
+  return Q_STOPS[best].name;
+};
 let emaDt = 16.7;                       // smoothed frame time (ms)
 let flowT = 0, lastTick = performance.now();
-const statFps = document.getElementById('stat-fps');
-const statPerf = document.getElementById('stat-perf');
-const statQuality = document.getElementById('stat-quality');
+const qStatus = document.getElementById('q-status');
+const tierSlider = document.getElementById('p-tier');
 const ringBar = document.querySelector('#btn-bg .ring-bar');
 const bgBtn = document.getElementById('btn-bg');
 const RING_C = 2 * Math.PI * 22;
@@ -543,23 +581,22 @@ const presets = {
 };
 let bg = { ...presets.original };
 function applyBg() {
-  const t = TIERS[tier];
-  gl.uniform1f(uU.uLayers, Math.max(3, Math.floor(bg.layers * t.mLayers)));
-  gl.uniform1f(uU.uIter, Math.max(10, Math.floor(bg.iter * t.mIter)));
+  const s = qScale();
+  gl.uniform1f(uU.uLayers, Math.max(3, Math.floor(bg.layers * s.mLayers)));
+  gl.uniform1f(uU.uIter, Math.max(10, Math.floor(bg.iter * s.mIter)));
   gl.uniform1f(uU.uFade, bg.fade);
   gl.uniform1f(uU.uGamma, bg.gamma);
   gl.uniform3f(uU.uTint, bg.tr, bg.tg, bg.tb);
   gl.uniform1f(uU.uFlowTime, flowT);
   document.querySelectorAll('.preset-grid button').forEach(b =>
     b.classList.toggle('active', b.dataset.preset === currentPreset));
-  statQuality.innerHTML = 'Adaptive Quality · <em>' + t.name + '</em>';
 }
 let currentPreset = 'original';
 
-// DPR capped per adaptive-quality tier (set in resize)
+// DPR capped by the continuous quality scalar (set in resize)
 let DPR;
 function resize() {
-  DPR = Math.min(devicePixelRatio || 1, TIERS[tier].dpr);
+  DPR = Math.min(devicePixelRatio || 1, qScale().dprCap);
   canvas.width = innerWidth * DPR;
   canvas.height = innerHeight * DPR;
   gl.viewport(0, 0, canvas.width, canvas.height);
@@ -580,7 +617,9 @@ function frame(now) {
   const dt = Math.min(0.1, (now - lastTick) / 1000) || 0;
   lastTick = now;
   // animation tempo is folded into an accumulated clock so speed changes stay seamless
-  flowT += dt * bg.speed * TIERS[tier].mSpeed;
+  // motion tempo stays constant — only sharpness/detail adapt, so the
+  // animation never visibly "shifts gears" while quality walks down
+  flowT += dt * bg.speed;
   if (dt > 0) emaDt = emaDt * 0.88 + (dt * 1000) * 0.12;
 
   gl.uniform2f(uRes, canvas.width, canvas.height);
@@ -598,46 +637,70 @@ bgBtn.addEventListener('click', e => { e.stopPropagation(); bgPanel.classList.to
 document.addEventListener('click', e => {
   if (!bgPanel.contains(e.target)) bgPanel.classList.remove('open');
 });
-let badStreak = 0, goodStreak = 0, cooldownUntil = 0;
+let lowStreak = 0, cooldownUntil = 0;
 document.querySelectorAll('.preset-grid button').forEach(b => {
   b.addEventListener('click', () => {
     currentPreset = b.dataset.preset;
     Object.assign(bg, presets[currentPreset]);
-    // give the new preset a fair chance at full quality, then let the governor adapt
-    tier = 0; badStreak = goodStreak = 0;
-    cooldownUntil = performance.now() + 2500;
-    resize(); applyBg();
+    // give a new preset a fair chance at full quality, then let the governor
+    // walk down again if needed (skipped while the user has locked quality)
+    if (manualQ < 0) { quality = 1; lowStreak = 0; cooldownUntil = performance.now() + 2500; }
+    resize(); applyBg(); syncTierUI();
   });
 });
 
-// HUD refresh (throttled) — ring arc + panel readouts
+// quality status line + manual quality override
+function paintTierFill() {
+  tierSlider.style.setProperty('--fill', (+tierSlider.value * 25) + '%');
+}
+function updateQStatus() {
+  const mode = manualQ >= 0 ? 'Manual' : 'Auto';
+  qStatus.innerHTML = mode + ' · <em>' + qName() + '</em> · <b>' + Math.round(fpsOf()) + '</b> fps';
+}
+function syncTierUI() {
+  // snap the thumb to the stop nearest the live quality
+  const q = effQ();
+  let stop = 0, bd = 9;
+  Q_STOPS.forEach((s, i) => { const d = Math.abs(s.q - q); if (d < bd) { bd = d; stop = i; } });
+  tierSlider.value = stop + 1;
+  paintTierFill();
+  updateQStatus();
+}
+
+// HUD refresh (throttled) — status line + ring arc
 setInterval(() => {
   if (!running) return;
   const pct = perfPct();
-  statFps.textContent = Math.round(fpsOf());
-  statPerf.textContent = Math.round(pct) + '%';
   ringBar.style.strokeDashoffset = (RING_C * (1 - pct / 100)).toFixed(2);
   bgBtn.classList.toggle('q-warn', pct < 85 && pct >= 55);
   bgBtn.classList.toggle('q-bad', pct < 55);
+  updateQStatus();
 }, 500);
 
-// adaptive quality governor — drops a tier when fps sags below ~48,
-// climbs back once the page sustains ~57+ fps
+// drag to Auto to re-enable the governor, or lock any fixed quality stop
+tierSlider.addEventListener('input', () => {
+  const v = +tierSlider.value;
+  manualQ = v === 0 ? -1 : Q_STOPS[v - 1].q;
+  if (v === 0) { lowStreak = 0; cooldownUntil = performance.now() + 1500; }
+  resize(); applyBg(); paintTierFill(); updateQStatus();
+});
+syncTierUI();
+
+// adaptive quality governor (Auto mode only) — walks quality DOWN in small
+// steps while fps sags below ~46 and never climbs back, so once it settles
+// the picture holds steady. Mild sag eases down ~7% per step; a dire sag
+// (<32fps) escapes faster. Each step only slightly softens the render.
 setInterval(() => {
-  if (!running || performance.now() < cooldownUntil) return;
-  const fps = fpsOf(), now = performance.now();
-  if (fps < 48 && tier < TIERS.length - 1) {
-    if (++badStreak >= 2) {
-      tier++; badStreak = goodStreak = 0;
-      cooldownUntil = now + 3500; resize(); applyBg();
+  if (!running || manualQ >= 0 || performance.now() < cooldownUntil) { lowStreak = 0; return; }
+  const fps = fpsOf();
+  if (fps < 46 && quality > 0) {
+    if (++lowStreak >= (fps < 32 ? 1 : 2)) {
+      quality = Math.max(0, quality - (fps < 32 ? 0.14 : 0.07));
+      lowStreak = 0;
+      resize(); applyBg(); syncTierUI();
     }
-  } else if (fps >= 57 && tier > 0) {
-    if (++goodStreak >= 4) {
-      tier--; goodStreak = 0;
-      cooldownUntil = now + 3500; resize(); applyBg();
-    }
-  } else { badStreak = goodStreak = 0; }
-}, 1200);
+  } else lowStreak = 0;
+}, 900);
 
 // scroll reveals
 const io = new IntersectionObserver(entries => {
