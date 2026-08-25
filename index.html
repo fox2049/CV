@@ -27,11 +27,11 @@
   #bg-wrap {
     position: fixed; inset: 0; z-index: 0;
   }
-  /* canvas starts hidden and slowly materializes while the auto-quality
-     probe settles underneath — near-zero black hold, tuning never seen */
+  /* canvas stays black while the auto-quality probe ramps and latches;
+     only after the test stabilizes does it start a slow fade-in */
   #bg-canvas {
     display: block; width: 100%; height: 100%;
-    opacity: 0; transition: opacity 3.2s var(--ease);
+    opacity: 0; transition: opacity 6s var(--ease);
   }
   #bg-canvas.show { opacity: 1; }
   /* readability veil — keeps motion visible but tames contrast under text */
@@ -765,10 +765,10 @@ setInterval(() => {
   } else trimStreak = 0;
 }, 800);
 
-// the slow materialize begins almost immediately — by the time the fade
-// completes (~3.7s) the probe has latched underneath it, so users see one
-// continuous gentle reveal instead of a black hold followed by a pop-in
-setTimeout(revealBg, 500);
+// reveal is gated on the probe: black holds until the test latches,
+// then the slow fade begins. A safety fallback avoids infinite black
+// if the probe stalls.
+setTimeout(() => { if (!canvas.classList.contains('show')) revealBg(); }, 9000);
 
 // scroll reveals
 const io = new IntersectionObserver(entries => {
