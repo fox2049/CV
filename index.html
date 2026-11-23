@@ -204,6 +204,9 @@
   }
 
   .entry-top { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  #education .entry-top { display: grid; grid-template-columns: minmax(0, 1fr) max-content; }
+  #education .entry-top > div { min-width: 0; }
+  #education .entry-date { justify-self: end; text-align: right; }
   .entry-title { font-size: 17px; font-weight: 500; color: #fff; letter-spacing: .01em; }
   .entry-sub { font-size: 12.5px; color: var(--ink-dim); margin-top: 4px; letter-spacing: .03em; }
   .entry-date {
@@ -221,7 +224,8 @@
   }
   ul.points b { font-weight: 500; color: var(--ink); }
 
-  /* publications */
+  /* publications and patents */
+  #publications, #patents { counter-reset: pub; }
   .pub {
     counter-increment: pub;
     padding: 18px 22px 18px 58px; margin-bottom: 10px; position: relative;
@@ -284,6 +288,7 @@
 
   @media (max-width: 600px) {
     .card { padding: 22px 20px; }
+    #education .entry-top { grid-template-columns: minmax(0, 1fr); gap: 10px; }
     .pub { padding-left: 52px; }
     .veil { background: linear-gradient(rgba(0,0,6,.55), rgba(0,0,6,.75)); }
   }
@@ -336,11 +341,9 @@
     <div class="sec-head reveal"><span class="sec-num">01</span><h2>Research Interests</h2></div>
     <div class="reveal">
       <div class="chips" style="padding:0 2px">
-        <span class="chip">Generative AI for Digital Fashion</span>
-        <span class="chip">Agentic Systems</span>
-        <span class="chip">AI-driven Garment Pattern Making</span>
-        <span class="chip">3D Garment Generation</span>
-        <span class="chip">Differentiable Physics Simulation</span>
+        <span class="chip">Intelligent Garment Pattern Generation</span>
+        <span class="chip">3D Digital Fashion</span>
+        <span class="chip">Generative AI</span>
         <span class="chip">Human-Computer Interaction</span>
       </div>
     </div>
@@ -352,7 +355,7 @@
       <div class="entry-top">
         <div><div class="entry-title">Donghua University</div>
         <div class="entry-sub">Ph.D. Candidate in Fashion Design and Engineering &nbsp;·&nbsp; Advisor: Prof. Zhaohui Wang</div></div>
-        <span class="entry-date">2023 — Now</span>
+        <span class="entry-date">Sep 2023 — Now</span>
       </div>
     </div>
     <div class="card reveal">
@@ -372,7 +375,7 @@
   </section>
 
   <section id="publications">
-    <div class="sec-head reveal"><span class="sec-num">03</span><h2>Selected Publications</h2></div>
+    <div class="sec-head reveal"><span class="sec-num">03</span><h2>Publications</h2></div>
     <div class="pub reveal">
       <p><strong>Sun, Y.</strong>, Wang, Z., Liu, R., et al. TailorCoPilot: Enabling Agentic Pattern Making with Version-Controlled State Tracking.</p>
       <div class="pub-meta"><span class="venue">ACM UIST '26 · CCF-A · Oral</span><a class="proj-link" href="https://fox2049.github.io/tailorcopilot/" target="_blank" rel="noopener">Project Page ↗</a></div>
@@ -395,8 +398,42 @@
     </div>
   </section>
 
+  <section id="patents">
+    <div class="sec-head reveal"><span class="sec-num">04</span><h2>Invention Patents</h2></div>
+    <div class="pub reveal">
+      <p><strong>Sun, Y.</strong>, et al. Evaluation of Garment Style Transfer Models.</p>
+      <span class="venue">Granted · ZL202311638840.6 · 2026</span>
+    </div>
+    <div class="pub reveal">
+      <p><strong>Sun, Y.</strong>, et al. Text-Driven Garment Pattern Generation.</p>
+      <span class="venue">Granted · ZL202510669798.7 · 2025</span>
+    </div>
+    <div class="pub reveal">
+      <p><strong>Sun, Y.</strong>, et al. Personalized Pattern Generation for Multiple Body Types.</p>
+      <span class="venue">Granted · ZL202510688367.5 · 2025</span>
+    </div>
+    <div class="pub reveal">
+      <p><strong>Sun, Y.</strong>, et al. Heterogeneous 3D-Printed Seat Cover and Fabrication Method.</p>
+      <span class="venue">Granted · ZL202110379086.3 · 2022</span>
+    </div>
+  </section>
+
+  <section id="grants">
+    <div class="sec-head reveal"><span class="sec-num">05</span><h2>Funding &amp; Grants</h2></div>
+    <div class="card reveal">
+      <ul class="points" style="margin-top:0">
+        <li><b>Principal Investigator</b> (¥60,000): Donghua University Outstanding Doctoral Student International Research Visit Program, 2026</li>
+        <li><b>Principal Investigator</b> (¥15,000): Automatic Generation and Dynamic Optimization of 3D Garment Patterns — Special Fund for High-Level Top-Notch Innovative Talent, 2025</li>
+        <li><b>Key Participant</b> (¥150,000): Sportswear Pattern Making and Dynamic Comfort Optimization Based on Parametric Modeling and AI — CNTAC-ANTA Joint Open Grant, 2026</li>
+        <li><b>Key Participant</b> (¥100,000): Digital Evaluation and Validation of FILA Garment Design — FILA–Donghua University Collaborative Research Project, 2026</li>
+        <li><b>Key Participant</b> (¥320,000): Research on Sportswear Technological Innovation and Development Trends — ANTA Group Consulting Project, 2023</li>
+        <li><b>Co-Author:</b> Introduction to Digital and Intelligent Fashion Technology (Ministry-level Textbook), 2025</li>
+      </ul>
+    </div>
+  </section>
+
   <section id="experience">
-    <div class="sec-head reveal"><span class="sec-num">04</span><h2>Research &amp; Industry Experience</h2></div>
+    <div class="sec-head reveal"><span class="sec-num">06</span><h2>Industry Experience</h2></div>
     <div class="card reveal">
       <div class="entry-top">
         <div><div class="entry-title">Style3D Research · Zhejiang Linctex Digital Tech</div>
@@ -413,31 +450,6 @@
     </div>
   </section>
 
-  <section id="grantssection>">
-    <div class="sec-head reveal"><span class="sec-num">05</span><h2>Funded Projects &amp; Grants</h2></div>
-    <div class="card reveal">
-      <ul class="points" style="margin-top:0">
-        <li><b>Principal Investigator</b> (¥60,000): Donghua University Outstanding Doctoral Student International Research Visit Program, 2026</li>
-        <li><b>Principal Investigator</b> (¥15,000): Automatic Generation and Dynamic Optimization of 3D Garment Patterns — Special Fund for High-Level Top-Notch Innovative Talent, 2025</li>
-        <li><b>Key Participant</b> (¥150,000): Sportswear Pattern Making and Dynamic Comfort Optimization Based on Parametric Modeling and AI — CNTAC-ANTA Joint Open Grant, 2026</li>
-        <li><b>Key Participant</b> (¥100,000): Digital Evaluation and Validation of FILA Garment Design — FILA–Donghua University Collaborative Research Project, 2026</li>
-        <li><b>Key Participant</b> (¥320,000): Research on Sportswear Technological Innovation and Development Trends — ANTA Group Consulting Project, 2023</li>
-        <li><b>Co-Author:</b> Introduction to Digital and Intelligent Fashion Technology (Ministry-level Textbook), 2025</li>
-      </ul>
-    </div>
-  </section>
-
-  <section id="patents">
-    <div class="sec-head reveal"><span class="sec-num">06</span><h2>Patents &amp; IP</h2></div>
-    <div class="card reveal">
-      <ul class="points" style="margin-top:0">
-        <li><b>Granted Invention Patents (4):</b> Evaluation of Garment Style Transfer Models (ZL202311638840.6, 2026) · Text-Driven Garment Pattern Generation (ZL202510669798.7, 2025) · Personalized Pattern Generation for Multiple Body Types (ZL202510688367.5, 2025) · Heterogeneous 3D-Printed Seat Cover and Fabrication Method (ZL202110379086.3, 2022)</li>
-        <li><b>Under Examination (2):</b> Feature Map Matching for Garment Style Transfer (CN202410155358.5, 2024) · Two-Stage Garment Style Transfer (CN202311553643.4, 2023)</li>
-        <li><b>Software Copyrights:</b> Fashion Pattern-Assisted Design System (2022SR0443802, 2022) · Collar Roll-Over Point Drafting and Analysis System (2021SR1327934, 2021)</li>
-      </ul>
-    </div>
-  </section>
-
   <section id="honors">
     <div class="sec-head reveal"><span class="sec-num">07</span><h2>Honors &amp; Awards</h2></div>
     <div class="card reveal">
@@ -451,19 +463,14 @@
   </section>
 
   <section id="skills">
-    <div class="sec-head reveal"><span class="sec-num">08</span><h2>Technical Skills</h2>h2></div>
+    <div class="sec-head reveal"><span class="sec-num">08</span><h2>Technical Skills &amp; Certifications</h2></div>
     <div class="card reveal">
-      <ul class="points" style="margin-bottom:18px">
-        <li><b>Programming:</b> Python (PyTorch, Paddle), Docker, Git, LaTeX</li>
-        <li><b>CAD &amp; Pattern Tools:</b> Style3D, CLO 3D, Blender, CATIA, Gerber, AutoCAD, BOKE, FUYI</li>
+      <ul class="points" style="margin-top:0">
+        <li><b>Programming &amp; Tools:</b> Python (PyTorch, Paddle), Docker, LaTeX, Git</li>
+        <li><b>2D/3D CAD:</b> Style3D, CLO 3D, Blender, CATIA, Gerber, AutoCAD, BOKE, FUYI</li>
+        <li><b>Languages:</b> English (CET-6: 567/710), Chinese (Native)</li>
+        <li><b>Certifications:</b> Certified Professional Garment Pattern Maker, Automotive Seat Trim Pattern Developer</li>
       </ul>
-      <div class="chips">
-        <span class="chip">Python</span><span class="chip">PyTorch</span><span class="chip">Paddle</span>
-        <span class="chip">Docker</span><span class="chip">Git</span><span class="chip">LaTeX</span>
-        <span class="chip">Style3D</span><span class="chip">CLO 3D</span><span class="chip">Blender</span>
-        <span class="chip">CATIA</span><span class="chip">Gerber</span><span class="chip">AutoCAD</span>
-        <span class="chip">BOKE</span><span class="chip">FUYI</span>
-      </div>
     </div>
   </section>
 
